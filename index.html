@@ -1,4 +1,12 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Zyn City</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1018">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zyn City">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <style>
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
@@ -30,7 +38,12 @@ body.p.tc .t{display:flex}body.dr .fo,body:not(.dr) .dv{display:none!important}#
 #brk{right:calc(26px + var(--s,78px) + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));background:#8a2a2acc}
 #jmp,#hbk{right:calc(26px + clamp(54px,15vmin,78px) + env(safe-area-inset-right));bottom:calc(26px + clamp(54px,15vmin,78px) + env(safe-area-inset-bottom))}
 #ent{right:calc(14px + env(safe-area-inset-right));bottom:calc(26px + clamp(54px,15vmin,78px) + env(safe-area-inset-bottom))}
+#rot{position:fixed;inset:0;z-index:99;background:#0b1018;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:18px;gap:14px}
+#rot .ph{width:46px;height:78px;border:4px solid #ffc933;border-radius:10px;animation:rt 2s ease-in-out infinite}
+@keyframes rt{0%,25%{transform:rotate(0)}65%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait){#rot{display:flex}}
 </style></head><body>
+<div id="rot"><div class="ph"></div><div>Rotate your phone<br><small style="opacity:.7">Zyn City plays in landscape</small></div></div>
 <canvas id="c"></canvas>
 <div id="tl" class="h"><canvas id="map"></canvas></div>
 <div id="tc" class="h"><div id="hp"><div id="hpb"></div></div><div id="st"></div><div id="ms"></div></div>
@@ -39,6 +52,20 @@ body.p.tc .t{display:flex}body.dr .fo,body:not(.dr) .dv{display:none!important}#
 <div id="joy" class="t fo"><div id="kn"></div></div>
 <div id="gas" class="t b dv">GAS</div><div id="brk" class="t b dv">BRAKE</div><div id="hbk" class="t b dv">HAND</div><div id="stl" class="t b dv">◀</div><div id="str" class="t b dv">▶</div><div id="jmp" class="t b fo">JUMP</div><div id="pch" class="t b fo">PUNCH</div><div id="ent" class="t b">ENTER</div>
 <div id="ovl"><div id="pan"></div></div><div id="ld">Loading city…</div>
+<script>
+(function(){
+ if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+ const touch=matchMedia('(pointer:coarse)').matches||navigator.maxTouchPoints>0;
+ async function goLandscape(){
+  if(!touch)return;
+  try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:'hide'})}catch(e){}
+  try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape')}catch(e){}
+ }
+ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}catch(e){}
+ ['pointerdown','touchend','click'].forEach(ev=>addEventListener(ev,goLandscape,{passive:true}));
+ document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)return;try{screen.orientation.lock('landscape').catch(()=>{})}catch(e){}});
+})();
+</script>
 <script src="three.min.js"></script>
 <script>( function () {
 
