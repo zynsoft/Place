@@ -4189,7 +4189,7 @@ addEventListener('resize',()=>setTimeout(size,50));addEventListener('orientation
 // ---------- city
 const tmp=new THREE.Object3D(),col=new THREE.Color(),bl=[],parks=[],bm=[];
 const L=(c)=>new THREE.MeshLambertMaterial({color:c});
-function inst(g,m,list,fn){const im=new THREE.InstancedMesh(g,m,list.length);list.forEach((v,i)=>{tmp.position.set(0,0,0);tmp.rotation.set(0,0,0);tmp.scale.set(1,1,1);fn(v,i,im);tmp.updateMatrix();im.setMatrixAt(i,tmp.matrix)});im.instanceMatrix.needsUpdate=true;sc.add(im);return im}
+const IMs=[];function inst(g,m,list,fn){const im=new THREE.InstancedMesh(g,m,list.length);list.forEach((v,i)=>{tmp.position.set(0,0,0);tmp.rotation.set(0,0,0);tmp.scale.set(1,1,1);fn(v,i,im);tmp.updateMatrix();im.setMatrixAt(i,tmp.matrix)});im.instanceMatrix.needsUpdate=true;sc.add(im);IMs.push(im);return im}
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(3000,3000),L(0x2b2d31));ground.rotation.x=-PI/2;ground.receiveShadow=true;sc.add(ground);
 function tex(em){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.fillStyle=em?'#000':'#c9ccd2';g.fillRect(0,0,64,64);for(let i=0;i<4;i++)for(let j=0;j<4;j++){g.fillStyle=em?(Math.random()<.45?'#ffd77a':'#000'):'#2c3c57';g.fillRect(i*16+3,j*16+3,10,10)}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t}
 const TH=[14,30,55],lots=[[],[],[]],slabs=[];
@@ -4253,7 +4253,8 @@ const UI={pause(){if(mode=='play'){mode='pause';this.show('main')}},play(){mode=
  show(v){mode=mode=='play'?'pause':mode;$('ovl').style.display='flex';const P=$('pan'),B=(t,f)=>`<button onclick="${f}">${t}</button>`;
   if(v=='main')P.innerHTML=`<h1>ZYN CITY</h1><p>Money $${sv.money} · Missions done ${sv.done}</p>`+B(mode=='menu'?'▶ Play':'▶ Resume','UI.play()')+B('Missions',"UI.show('ms')")+B('Settings',"UI.show('set')")+`<p>WASD move · Shift run · Space jump · F punch · E car · Mouse/drag camera · Esc pause</p>`;
   if(v=='ms')P.innerHTML='<h1>Missions</h1>'+MS.map((m,i)=>B(`<b>${m.n}</b> · $${m.r}<br><small>${m.d}</small>`,`startM(${i})`)).join('')+B('Back',"UI.show('main')");
-  if(v=='set')P.innerHTML='<h1>Settings</h1>'+B('Graphics: '+['Low','Medium','High'][cfg.q],'cfg.q=(cfg.q+1)%3;save();size();UI.show(\'set\')')+B('Rain: '+(cfg.rain?'On':'Off'),'cfg.rain^=1;save();size();UI.show(\'set\')')+B('Sound: '+(cfg.snd?'On':'Off'),'cfg.snd^=1;save();UI.show(\'set\')')+B('Reset progress','sv.money=0;sv.done=0;save();UI.show(\'set\')')+B('Back',"UI.show('main')")}};
+  if(v=='set')P.innerHTML='<h1>Settings</h1>'+B('Graphics: '+['Low','Medium','High'][cfg.q],'cfg.q=(cfg.q+1)%3;save();size();UI.show(\'set\')')+B('Rain: '+(cfg.rain?'On':'Off'),'cfg.rain^=1;save();size();UI.show(\'set\')')+B('Sound: '+(cfg.snd?'On':'Off'),'cfg.snd^=1;save();UI.show(\'set\')')+B('Reset progress','sv.money=0;sv.done=0;save();UI.show(\'set\')')+B('My Models (import)',"UI.show('mod')")+B('Back',"UI.show('main')");
+  if(v=='mod')P.innerHTML='<h1>My Models</h1><p>Add .glb files for each group, then press Apply. They are saved on this device.</p>'+[['car','Cars'],['bld','Buildings'],['per','People'],['pol','Police car']].map(([s,n])=>B(`${n}: ${MC[s]} saved - add .glb`,`pick('${s}')`)+(MC[s]?B('Clear '+n,`clr('${s}')`):'')).join('')+B(`Car front faces: ${['+Z','+X','-Z','-X'][cfg.cf|0]}`,`cfg.cf=((cfg.cf|0)+1)%4;save();UI.show('mod')`)+B('Apply (reload game)','location.reload()')+B('Back',"UI.show('set')")}};
 addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=1;if(k==' ')jumpReq=1;if(k=='e')toggleCar();if(k=='f')punchReq=1;if(k=='escape'||k=='p')mode=='play'?UI.pause():0;if([' ','arrowup','arrowdown'].includes(k))e.preventDefault()});
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement&&mode=='play')UI.pause()});
@@ -4349,8 +4350,27 @@ function gCar(color){const w=new THREE.Group(),m=AS.car.scene.clone(true);w.add(
  m.rotation.y=-Math.atan2(f.x-r.x,f.z-r.z);norm(m,4.5);
  m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.material=o.material.clone();if(o.material.name=='Body_Color')o.material.color.set(color);else if(o.material.metalness>.6)o.material.metalness=.6}});sc.add(w);return w}
 function gPer(s){const w=new THREE.Group(),m=THREE.SkeletonUtils.clone(AS.man.scene);w.add(m);norm(m,0,1.75*s);const mx=new THREE.AnimationMixer(m),act=mx.clipAction(AS.man.animations[0]);act.play();act.time=rnd(0,2);w.userData={mx,act,lg:[],ar:[]};sc.add(w);return w}
-Promise.all([gp('car'),gp('man')]).then(()=>{try{
+const BI=Promise.all([gp('car'),gp('man')]).then(()=>{try{
  if(AS.man){sc.remove(pl.m);pl.m=gPer(1);pd.forEach(p=>{sc.remove(p.m);p.m=gPer(rnd(.92,1.08))})}
  if(AS.car)pk.concat(tr).forEach(o=>{if((o.ti|0)<2){sc.remove(o.m);o.m=gCar(cols[Math.random()*8|0])}})}catch(e){console.warn(e)}});
+
+const MC={car:0,bld:0,per:0,pol:0};
+const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('zc_models',1);r.onupgradeneeded=()=>r.result.createObjectStore('m');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const idbGet=async k=>{try{const d=await idb();return await new Promise(res=>{const q=d.transaction('m').objectStore('m').get(k);q.onsuccess=()=>res(q.result||[]);q.onerror=()=>res([])})}catch(e){return[]}};
+const idbSet=async(k,v)=>{try{const d=await idb();return await new Promise(res=>{const t=d.transaction('m','readwrite');t.objectStore('m').put(v,k);t.oncomplete=()=>res(1);t.onerror=()=>res(0)})}catch(e){toast('Storage not available');return 0}};
+function pick(s){const i=document.createElement('input');i.type='file';i.multiple=true;i.accept='.glb';i.onchange=async()=>{const a=await idbGet(s);for(const f of i.files)a.push({n:f.name,b:await f.arrayBuffer()});await idbSet(s,a);MC[s]=a.length;UI.show('mod')};i.click()}
+async function clr(s){await idbSet(s,[]);MC[s]=0;UI.show('mod')}
+async function loadUser(){try{const U={};
+ for(const s of['car','bld','per','pol']){const a=await idbGet(s);MC[s]=a.length;U[s]=[];for(const f of a)await new Promise(r=>GLp.parse(f.b.slice(0),'',g=>{U[s].push(g);r()},e=>{console.warn(f.n,e);r()}))}
+ const any=a=>a[Math.floor(Math.random()*a.length)],shade=w=>w.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+ const mkC=g=>{const w=new THREE.Group(),m=THREE.SkeletonUtils.clone(g.scene);w.add(m);m.rotation.y=[0,-PI/2,PI,PI/2][cfg.cf|0];norm(m,4.5);shade(w);sc.add(w);return w};
+ if(U.car.length)pk.concat(tr).forEach(o=>{sc.remove(o.m);o.m=mkC(any(U.car))});
+ if(U.pol.length)pols.forEach(p=>{sc.remove(p.m);p.m=mkC(U.pol[0]);p.m.userData={a:{},d:{}};p.m.visible=false});
+ if(U.per.length){const mkP=(s,i)=>{const g=i>=0?U.per[i%U.per.length]:any(U.per),w=new THREE.Group(),m=THREE.SkeletonUtils.clone(g.scene);w.add(m);norm(m,0,1.75*s);w.userData={lg:[],ar:[]};if(g.animations[0]){const mx=new THREE.AnimationMixer(m),act=mx.clipAction(g.animations[0]);act.play();act.time=rnd(0,2);Object.assign(w.userData,{mx,act})}sc.add(w);return w};
+  sc.remove(pl.m);pl.m=mkP(1,0);pd.forEach(p=>{sc.remove(p.m);p.m=mkP(rnd(.92,1.08),-1)})}
+ if(U.bld.length){IMs.forEach(im=>{const p=im.geometry.parameters;if(p&&[24,14,3].includes(p.width)&&p.depth!==62)im.visible=false});
+  lots.forEach(a=>a.forEach(v=>{const w=new THREE.Group(),m=THREE.SkeletonUtils.clone(any(U.bld).scene);w.add(m);norm(m,24*v.s);w.position.set(v.x,.15,v.z);w.rotation.y=Math.floor(rnd(0,4))*PI/2;shade(w);sc.add(w)}))}
+ }catch(e){console.warn(e)}}
+BI.then(loadUser);
 size();UI.show('main');loop();$('ld').style.display='none';
 </script></body></html>
